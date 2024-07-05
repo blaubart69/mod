@@ -56,24 +56,6 @@ static void one_mod(
     hn::Store(result, di16, mod);
 }
 
-template <class DI16, class DI32, class VI16>
-static void one_mod_sub(
-      const DI16 di16
-    , const DI32 di32
-    ,       int16_t* HWY_RESTRICT mod
-    , const int16_t* HWY_RESTRICT a
-    , const VI16  vb
-    )
-{
-    auto va = hn::Load(di16,a);
-
-    auto gt = hn::Gt(a,b);
-    auto gt = hn::And(a,gt);
-    hn::CountTrue(gt);
-    hn::MaskedSubOr(a, gt, a, vb)
-
-}
-
 void loop_mod(
       const size_t size
     , const int16_t* HWY_RESTRICT a

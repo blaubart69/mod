@@ -7,7 +7,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(SOURCES 
     src/mod.cpp
-    src/mod_simd.cpp
+    src/mod_simd_shr.cpp
+    src/mod_simd_sub.cpp
     ../highway/hwy/print.cc
     ../highway/hwy/targets.cc
     ../highway/hwy/per_target.cc
