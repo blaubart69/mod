@@ -2,12 +2,18 @@
 #include <cstdlib>
 
 namespace mod {
-    void run_mod(
+    void run_mod_simd_shr(
       const size_t size
     , const int16_t* __restrict__ a
     , const int16_t b
     ,       int16_t* __restrict__ mod
-    ) ;
+    );
+    void run_mod_simd_sub(
+      const size_t size
+    , const int16_t* __restrict__ a
+    , const int16_t b
+    ,       int16_t* __restrict__ mod
+    );
 }
 
 int calc_k(const int shr, const int b)
@@ -79,17 +85,25 @@ void run_simd() {
     int     b = 80;
 
     for (int i=0; i < SIZE; i++) {
-        a[i] = 60 + i;
+        a[i] = -30 + i;
     }
 
-    mod::run_mod(SIZE,a,b,mod);
+    mod::run_mod_simd_sub(SIZE,a,b,mod);
 
     for ( int i=0; i < SIZE; i++) {
-        printf("%d mod %d = %d\n", a[i], b, mod[i]);
+        int expected = a[i] % b;
+        const char* result;
+        if ( expected == mod[i]) {
+            result = "OK";
+        }
+        else {
+            result = "ERR";
+        }
+        printf("%d mod %d = %d\t%s\n", a[i], b, mod[i],result);
     }  
 
 }
 
 int main() {
-    run_simple();
+    run_simd();
 }

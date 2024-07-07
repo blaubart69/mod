@@ -80,7 +80,7 @@ void loop_mod(
 HWY_AFTER_NAMESPACE();
 
 namespace mod {
-    void run_mod(
+    void run_mod_simd_shr(
       const size_t size
     , const int16_t* HWY_RESTRICT a
     , const int16_t b
