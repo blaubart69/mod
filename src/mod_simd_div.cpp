@@ -12,28 +12,17 @@ namespace HWY_NAMESPACE {
 namespace hn = hwy::HWY_NAMESPACE;
 
 template <class DI16, class VI16>
-static void mod_sub_v3(
+static void mod_div(
     const DI16 di16
     , const int16_t* HWY_RESTRICT a
     , const VI16     vb
     ,       int16_t* HWY_RESTRICT mod)
 {
-    auto va = hn::Load(di16,a);
+    const auto va = hn::Load(di16,a);
 
-    auto negative_mask = hn::IsNegative(va);
-    va = hn::IfThenElse(negative_mask, hn::Neg(va), va);
+    VI16 result = hn::Mod(va,vb);
 
-    for (;;) {
-            auto mask = hn::Ge(va,vb);
-            va = hn::MaskedSubOr(va, mask, va, vb);
-            if ( hn::AllFalse(di16,mask) ) {
-                break;
-            }
-        }
-
-    va = hn::IfThenElse(negative_mask, hn::Neg(va), va);
-
-    hn::Store(va, di16, mod);
+    hn::Store(result, di16, mod);
 }
 
 static void loop_mod(
@@ -43,13 +32,12 @@ static void loop_mod(
     ,       int16_t* HWY_RESTRICT mod
     ) {
     const hn::ScalableTag<int16_t> di16;
-    const hn::ScalableTag<int32_t> di32;
 
     const auto vb = hn::Set(di16,b);
 
     for ( size_t i = 0; i < size; i += hn::Lanes(di16) )
     {
-        mod_sub_v3(di16, a + i, vb, mod + i);
+        mod_div(di16, a + i, vb, mod + i);
     }
 }
 
@@ -60,7 +48,7 @@ HWY_AFTER_NAMESPACE();
 
 
 namespace mod {
-    void run_simd_sub(
+    void run_simd_div(
       const size_t size
     , const int16_t* HWY_RESTRICT a
     , const int16_t b

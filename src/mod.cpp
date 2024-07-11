@@ -1,14 +1,21 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "benchmark/benchmark.h"
 namespace mod {
-    void run_mod_simd_shr(
+    void run_simd_shr(
       const size_t size
     , const int16_t* __restrict__ a
     , const int16_t b
     ,       int16_t* __restrict__ mod
     );
-    void run_mod_simd_sub(
+    void run_simd_sub(
+      const size_t size
+    , const int16_t* __restrict__ a
+    , const int16_t b
+    ,       int16_t* __restrict__ mod
+    );
+    void run_simd_div(
       const size_t size
     , const int16_t* __restrict__ a
     , const int16_t b
@@ -76,7 +83,7 @@ void run_simple() {
     }
 }
 
-void run_simd() {
+void run_sub() {
 
     #define SIZE 64
 
@@ -85,11 +92,11 @@ void run_simd() {
     int     b = 80;
 
     for (int i=0; i < SIZE; i++) {
-        a[i] = -30 + i;
+        a[i] = -32 + i;
     }
 
-    mod::run_mod_simd_sub(SIZE,a,b,mod);
-
+    mod::run_simd_sub(SIZE,a,b,mod);
+    /*
     for ( int i=0; i < SIZE; i++) {
         int expected = a[i] % b;
         const char* result;
@@ -100,10 +107,59 @@ void run_simd() {
             result = "ERR";
         }
         printf("%d mod %d = %d\t%s\n", a[i], b, mod[i],result);
-    }  
+    } */ 
 
 }
 
+void run_div() {
+
+    #define SIZE 64
+
+    int16_t mod[SIZE] __attribute__ ((aligned (128)));
+    int16_t a  [SIZE] __attribute__ ((aligned (128)));
+    int     b = 80;
+
+    for (int i=0; i < SIZE; i++) {
+        a[i] = -32 + i;
+    }
+
+    mod::run_simd_div(SIZE,a,b,mod);
+    /*
+    for ( int i=0; i < SIZE; i++) {
+        int expected = a[i] % b;
+        const char* result;
+        if ( expected == mod[i]) {
+            result = "OK";
+        }
+        else {
+            result = "ERR";
+        }
+        printf("%d mod %d = %d\t%s\n", a[i], b, mod[i],result);
+    } */ 
+
+}
+
+/*
 int main() {
     run_simd();
+}*/
+
+static void BM_mod_substract(benchmark::State& state) {
+  // Perform setup here
+  for (auto _ : state) {
+    // This code gets timed
+    run_sub();
+  }
 }
+static void BM_mod_div(benchmark::State& state) {
+  // Perform setup here
+  for (auto _ : state) {
+    // This code gets timed
+    run_div();
+  }
+}
+// Register the function as a benchmark
+BENCHMARK(BM_mod_substract);
+BENCHMARK(BM_mod_div);
+// Run the benchmark
+BENCHMARK_MAIN();
