@@ -65,7 +65,8 @@ void loop_mod(
     const hn::ScalableTag<int16_t> di16;
     const hn::ScalableTag<int32_t> di32;
 
-    const int16_t k = 1 + ( (1 << 16) / b );
+    const int shr = 16;
+    const int16_t k = ( (1 << shr) + b - 1 ) / b ;
     const auto vb = hn::Set(di16,b);
 
     for ( size_t i = 0; i < size; i += hn::Lanes(di16) )

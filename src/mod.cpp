@@ -1,7 +1,22 @@
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
 
 #include "benchmark/benchmark.h"
+
+void test_mod(const size_t len, int16_t* a, int16_t b, int16_t* mod) {
+  for ( int i=0; i < len; i++) {
+        int expected = a[i] % b;
+        const char* result;
+        if ( expected == mod[i]) {
+            result = "OK";
+        }
+        else {
+            result = "ERR";
+        }
+        printf("%d mod %d = %d\t%s\n", a[i], b, mod[i],result);
+    }  
+}
 namespace mod {
     void run_simd_shr(
       const size_t size
@@ -23,143 +38,75 @@ namespace mod {
     );
 }
 
-int calc_k(const int shr, const int b)
-{
-    //return 1 + ( (1 << shr) / b );
-    return ( (1 << shr) + b - 1 ) / b ;
-}
+class Data {
+  public:
+    size_t size;
+    int16_t  b;
+    std::unique_ptr<int16_t> a;
+    std::unique_ptr<int16_t> mod;
 
-int a_mod_b_approx(const int16_t a, const int16_t b, const int16_t k, const int16_t shr)
-{
-    // mod = a - ( (a * k) / 2^x ) * b
+    Data(int align, int16_t start, size_t size,  int16_t b) {
+      this->size = size;
+      this->b = b;
+      a   = std::unique_ptr<int16_t>( static_cast<int16_t*>(std::aligned_alloc( align, size * sizeof(int16_t) )) );
+      mod = std::unique_ptr<int16_t>( static_cast<int16_t*>(std::aligned_alloc( align, size * sizeof(int16_t) )) );
 
-    const int tmp1 = a * k;
-    const int tmp2 = tmp1 >> shr;
-    const int tmp3 = tmp2 * b;
-          int tmp4 = a - tmp3;
+      int16_t* _a = a.get();
 
-    if ( tmp4 < 0 ) {
-        tmp4 += b;
-    }
-    
-    return tmp4;
-}
-
-void run_simple() {
-    const int b_max = 3;
-    const int a_max = 10;
-    const int shr_max = 16;
-
-    size_t count_diff = 0;
-    size_t sum_delta = 0;
-
-    for (int shr=16; shr <= shr_max; shr++) {
-        for (int b=1; b <= b_max; b++) {
-
-            const int k = calc_k(shr,b);
-
-            count_diff = 0;
-            sum_delta = 0;
-            for (int a = 0; a <= a_max; a++) {
-
-                const int mod_approx   = a_mod_b_approx(a,b,k,shr);
-                const int mod_expected = a % b;
-
-                if ( mod_expected != mod_approx ) {
-                    count_diff += 1;
-                    const int delta = abs(mod_approx - mod_expected);
-                    sum_delta += delta;
-                    printf("E: shr: %d\ta: %d\tb: %d\texpected: %d != \tgot: %d\n", shr, a, b, mod_expected, mod_approx);
-                }
-                else {
-                    printf("I: shr: %d\ta: %d\tb: %d\texpected: %d == \tgot: %d\n", shr, a, b, mod_expected, mod_approx);
-                }
-            }
-            //if ( count_diff > 0) {
-                //printf("shr: %d\tb: %d\tdiffs: %ld\tsum_delta: %ld\n", shr, b, count_diff, sum_delta);
-            //}
-            
-        }
-    }
-}
-
-void run_sub() {
-
-    #define SIZE 64
-
-    int16_t mod[SIZE] __attribute__ ((aligned (128)));
-    int16_t a  [SIZE] __attribute__ ((aligned (128)));
-    int     b = 80;
-
-    for (int i=0; i < SIZE; i++) {
-        a[i] = -32 + i;
+      for (int i=0; i < size; i++) {
+        _a[i] = start + i;
+      }
     }
 
-    mod::run_simd_sub(SIZE,a,b,mod);
-    /*
-    for ( int i=0; i < SIZE; i++) {
-        int expected = a[i] % b;
-        const char* result;
-        if ( expected == mod[i]) {
-            result = "OK";
-        }
-        else {
-            result = "ERR";
-        }
-        printf("%d mod %d = %d\t%s\n", a[i], b, mod[i],result);
-    } */ 
+};
 
+const int16_t B = 5;
+const int16_t START = -128;
+const size_t SIZE = 2 * std::abs(START);
+const int ALIGN = 32;
+
+class MyFixture : public benchmark::Fixture {
+public:
+
+  Data data;
+
+  MyFixture() : data(ALIGN, START, SIZE, B) {}
+
+  void SetUp(::benchmark::State& state) {
+  }
+
+  void TearDown(::benchmark::State& state) {
+  }
+
+};
+
+BENCHMARK_DEFINE_F(MyFixture, divide)(benchmark::State& st) {
+  for (auto _ : st) {
+    mod::run_simd_div(data.size,data.a.get(),data.b,data.mod.get());
+  }
 }
 
-void run_div() {
-
-    #define SIZE 64
-
-    int16_t mod[SIZE] __attribute__ ((aligned (128)));
-    int16_t a  [SIZE] __attribute__ ((aligned (128)));
-    int     b = 80;
-
-    for (int i=0; i < SIZE; i++) {
-        a[i] = -32 + i;
-    }
-
-    mod::run_simd_div(SIZE,a,b,mod);
-    /*
-    for ( int i=0; i < SIZE; i++) {
-        int expected = a[i] % b;
-        const char* result;
-        if ( expected == mod[i]) {
-            result = "OK";
-        }
-        else {
-            result = "ERR";
-        }
-        printf("%d mod %d = %d\t%s\n", a[i], b, mod[i],result);
-    } */ 
-
+BENCHMARK_DEFINE_F(MyFixture, substract)(benchmark::State& st) {
+  for (auto _ : st) {
+    mod::run_simd_sub(data.size,data.a.get(),data.b,data.mod.get());
+  }
 }
+
+
+/* BarTest is NOT registered */
+BENCHMARK_REGISTER_F(MyFixture, divide);
+BENCHMARK_REGISTER_F(MyFixture, substract);
+
+/* BarTest is now registered */
+// Register the function as a benchmark
+//BENCHMARK(BM_mod_substract)->Setup(DoSetup)->Teardown(DoTeardown);
+//BENCHMARK(BM_mod_div)->Setup(DoSetup)->Teardown(DoTeardown);
+// Run the benchmark
+BENCHMARK_MAIN();
 
 /*
 int main() {
-    run_simd();
+  Data data(ALIGN, START, SIZE, B);
+  mod::run_simd_sub(data.size,data.a.get(),data.b,data.mod.get());
+  test_mod(data.size,data.a.get(),data.b,data.mod.get());
 }*/
-
-static void BM_mod_substract(benchmark::State& state) {
-  // Perform setup here
-  for (auto _ : state) {
-    // This code gets timed
-    run_sub();
-  }
-}
-static void BM_mod_div(benchmark::State& state) {
-  // Perform setup here
-  for (auto _ : state) {
-    // This code gets timed
-    run_div();
-  }
-}
-// Register the function as a benchmark
-BENCHMARK(BM_mod_substract);
-BENCHMARK(BM_mod_div);
-// Run the benchmark
-BENCHMARK_MAIN();
