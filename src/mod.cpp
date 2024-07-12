@@ -60,7 +60,7 @@ class Data {
 
 };
 
-const int16_t B = 5;
+const int16_t B = 31;
 const int16_t START = -128;
 const size_t SIZE = 2 * std::abs(START);
 const int ALIGN = 32;
