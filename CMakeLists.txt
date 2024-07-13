@@ -10,6 +10,7 @@ set(SOURCES
     src/mod_simd_shr.cpp
     src/mod_simd_sub.cpp
     src/mod_simd_div.cpp
+    src/mod_simd_sub_unrolled.cpp
     ../highway/hwy/print.cc
     ../highway/hwy/targets.cc
     ../highway/hwy/per_target.cc

@@ -36,6 +36,12 @@ namespace mod {
     , const int16_t b
     ,       int16_t* __restrict__ mod
     );
+    void run_simd_sub_unrolled(
+      const size_t size
+    , const int16_t* __restrict__ a
+    , const int16_t b
+    ,       int16_t* __restrict__ mod
+    );
 }
 
 class Data {
@@ -60,8 +66,8 @@ class Data {
 
 };
 
-const int16_t B = 31;
-const int16_t START = -128;
+const int16_t B = 80;
+const int16_t START = -256;
 const size_t SIZE = 2 * std::abs(START);
 const int ALIGN = 32;
 
@@ -81,21 +87,32 @@ public:
 };
 
 BENCHMARK_DEFINE_F(MyFixture, divide)(benchmark::State& st) {
+  data.b = st.range(0);
   for (auto _ : st) {
     mod::run_simd_div(data.size,data.a.get(),data.b,data.mod.get());
   }
 }
 
 BENCHMARK_DEFINE_F(MyFixture, substract)(benchmark::State& st) {
+  data.b = st.range(0);
   for (auto _ : st) {
     mod::run_simd_sub(data.size,data.a.get(),data.b,data.mod.get());
   }
 }
 
+BENCHMARK_DEFINE_F(MyFixture, substract_unrolled)(benchmark::State& st) {
+  data.b = st.range(0);
+  for (auto _ : st) {
+    mod::run_simd_sub_unrolled(data.size,data.a.get(),data.b,data.mod.get());
+  }
+}
+
+
 
 /* BarTest is NOT registered */
-BENCHMARK_REGISTER_F(MyFixture, divide);
-BENCHMARK_REGISTER_F(MyFixture, substract);
+BENCHMARK_REGISTER_F(MyFixture, substract)         ->Range(2, 2<<8);
+BENCHMARK_REGISTER_F(MyFixture, substract_unrolled)->Range(2, 2<<8);
+BENCHMARK_REGISTER_F(MyFixture, divide)            ->Range(2, 2<<8);
 
 /* BarTest is now registered */
 // Register the function as a benchmark
@@ -106,7 +123,7 @@ BENCHMARK_MAIN();
 
 /*
 int main() {
-  Data data(ALIGN, START, SIZE, B);
-  mod::run_simd_sub(data.size,data.a.get(),data.b,data.mod.get());
+  Data data(ALIGN, START, SIZE, 512);
+  mod::run_simd_sub_unrolled(data.size,data.a.get(),data.b,data.mod.get());
   test_mod(data.size,data.a.get(),data.b,data.mod.get());
 }*/
